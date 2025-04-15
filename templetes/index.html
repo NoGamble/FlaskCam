@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>图像实时展示</title>
+    <script>
+        function reloadImage() {
+            document.getElementById("img").src = "/image?" + new Date().getTime();
+        }
+        setInterval(reloadImage, 1000); // 每秒更新一次图像
+    </script>
+</head>
+<body>
+    <h1>实时图像处理展示（灰度图）</h1>
+    <img id="img" src="/image" width="640" />
+</body>
+</html>
