@@ -1,16 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>图像实时展示</title>
-    <script>
-        function reloadImage() {
-            document.getElementById("img").src = "/image?" + new Date().getTime();
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Image Processing</title>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #166088;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        setInterval(reloadImage, 1000); // 每秒更新一次图像
-    </script>
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e1e1e1;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: var(--secondary-color);
+            font-weight: 400;
+            margin-top: 0;
+        }
+        
+        .video-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            padding: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .video-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        
+        .info-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .info-panel h2 {
+            color: var(--secondary-color);
+            margin-top: 0;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e1e1e1;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>实时图像处理展示（灰度图）</h1>
-    <img id="img" src="/image" width="640" />
+    <div class="container">
+        <header>
+            <h1>Real-Time Image Processing</h1>
+            <p class="subtitle">Live demonstration of edge detection algorithm</p>
+        </header>
+        
+        <div class="video-container">
+            <img src="{{ url_for('video_feed') }}" width="640" height="480" alt="Live processed video feed">
+        </div>
+        
+        <div class="info-panel">
+            <h2>About This Demonstration</h2>
+            <p>This system processes live video feed using computer vision algorithms. The left side shows the original camera input, while the right side displays the processed output with edge detection applied.</p>
+            <p>The backend uses Python with Flask for web serving and ZeroMQ for distributed processing between components.</p>
+        </div>
+        
+        <footer>
+            <p>© 2023 Image Processing Demo | Powered by Flask and ZeroMQ</p>
+        </footer>
+    </div>
 </body>
 </html>
