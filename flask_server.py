@@ -22,8 +22,8 @@ def image():
     return send_file("static/latest.jpg", mimetype='image/jpeg')
 
 if __name__ == '__main__':
-    # 创建static目录（如果没有）
     os.makedirs("static", exist_ok=True)
     with open("static/latest.jpg", "wb") as f:
-        f.write(b"")  # 创建空文件防止页面初次加载出错
-    app.run(debug=True)
+        f.write(b"")  
+    app.run(host='0.0.0.0', port=5001, debug=True)
+
