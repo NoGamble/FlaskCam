@@ -9,12 +9,23 @@ import zmq
 import base64
 import uuid
 import time 
-
-# 确保 eventlet 打补丁，以便与 SocketIO 协程兼容
-eventlet.monkey_patch()
+import socket
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_very_secret_random_key_here' # 请务必修改并保密！
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except:
+        return '127.0.0.1'
+
+LOCAL_IP = get_local_ip()
+print(f"本机局域网IP: {LOCAL_IP}")
 
 # 使用 eventlet 的 SocketIO
 socketio = SocketIO(app, async_mode='eventlet')
@@ -25,8 +36,9 @@ rooms = {}
 sid_to_username = {}
 
 # --- ZeroMQ 设置 (与分布式图片处理一致) ---
-TASK_SEND_ADDRESS = "tcp://127.0.0.1:5555"
-RESULT_RECEIVE_ADDRESS = "tcp://127.0.0.1:5556"
+TASK_SEND_ADDRESS = f"tcp://{LOCAL_IP}:5555"
+RESULT_RECEIVE_ADDRESS = f"tcp://{LOCAL_IP}:5556"
+
 
 context = zmq.Context()
 
@@ -300,9 +312,23 @@ def start_zmq_poller():
     socketio.start_background_task(target=zmq_result_poller_task)
     print("ZeroMQ result poller background task scheduled.")
 
+import atexit
+@atexit.register
+def cleanup_zmq():
+    print("Cleaning up ZeroMQ sockets.")
+    task_sender.close()
+    result_receiver.close()
+    context.term()
+    print("ZeroMQ cleanup complete.")
 
 if __name__ == '__main__':
     # ... (保持原有 main 部分，确保 start_zmq_poller() 在 socketio.run() 之前被调用一次) ...
     start_zmq_poller()
     print("Starting SocketIO server...")
-    socketio.run(app, debug=True, host='127.0.0.1', port=5000, use_reloader=False)
+    socketio.run(
+        app, 
+        debug=True, 
+        host='0.0.0.0',  # 允许所有网络接口访问
+        port=5001, 
+        use_reloader=False
+    )
