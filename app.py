@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import random
@@ -5,8 +8,7 @@ import json
 import zmq
 import base64
 import uuid
-import time
-import eventlet # 使用 eventlet 进行非阻塞 ZeroMQ 轮询
+import time 
 
 # 确保 eventlet 打补丁，以便与 SocketIO 协程兼容
 eventlet.monkey_patch()

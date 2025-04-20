@@ -1,103 +1,366 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>多人视频聊天室带特效快照</title>
+    <title>多人视频聊天室 - 特效快照</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.1.3/dist/socket.io.min.js"></script>
     <style>
-        #videosContainer {
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --dark-color: #1b263b;
+            --light-color: #f8f9fa;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --warning-color: #f8961e;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .join-form {
+            background-color: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
+            align-items: center;
         }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--dark-color);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button i {
+            font-size: 18px;
+        }
+
+        #videosContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
         .video-container {
             position: relative;
-            border: 1px solid #ccc;
-            padding: 5px;
-            background-color: #f9f9f9;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
+            background-color: white;
+            transition: var(--transition);
         }
+
+        .video-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        #localVideoContainer {
+            border: 3px solid var(--success-color);
+        }
+
         .video-container video {
-            width: 300px; /* 根据需要调整视频大小 */
+            width: 100%;
             height: auto;
-            background-color: black;
+            background-color: #000;
+            display: block;
         }
+
         .video-label {
             position: absolute;
             bottom: 10px;
             left: 10px;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.7);
             color: white;
-            padding: 3px 6px;
-            font-size: 0.9em;
-            border-radius: 3px;
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
-        #localVideoContainer {
-             border: 2px solid green; /* 本地视频加个边框区分 */
-             padding: 5px;
-             background-color: #f9f9f9;
+
+        .video-label i {
+            font-size: 12px;
         }
-         #localVideoContainer video {
-            width: 300px; /* 根据需要调整视频大小 */
-            height: auto;
-            background-color: black;
+
+        .controls {
+            background-color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
         }
-        #snapshotControls {
-            margin-top: 20px;
+
+        .controls h2 {
+            margin-bottom: 15px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls h2 i {
+            color: var(--accent-color);
+        }
+
+        .snapshot-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        select {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            background-color: white;
+            flex: 1;
+            min-width: 200px;
+            transition: var(--transition);
+        }
+
+        select:focus {
+            border-color: var(--accent-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        #snapshotStatus {
+            flex: 1;
+            min-width: 100%;
             padding: 10px;
-            border: 1px dashed #ccc;
+            border-radius: var(--border-radius);
+            background-color: #f8f9fa;
+            text-align: center;
         }
-        #processedSnapshot {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid blue;
-            background-color: #eef;
+
+        .snapshot-result {
+            background-color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            display: none;
         }
-        #processedSnapshot img {
-            max-width: 100%;
+
+        .snapshot-result h2 {
+            margin-bottom: 15px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .snapshot-result h2 i {
+            color: var(--accent-color);
+        }
+
+        #processedSnapshotImg {
+            width: 100%;
+            max-width: 500px;
             height: auto;
+            border-radius: var(--border-radius);
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #snapshotCanvas {
+            display: none;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: var(--success-color);
+        }
+
+        .status-offline {
+            background-color: var(--danger-color);
+        }
+
+        @media (max-width: 768px) {
+            .join-form {
+                flex-direction: column;
+            }
+            
+            .form-group, select, button {
+                width: 100%;
+            }
+            
+            #videosContainer {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 加载动画 */
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.1.3/dist/socket.io.min.js"></script>
 </head>
 <body>
-    <h1>多人视频聊天室带特效快照</h1>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-video"></i> 多人视频聊天室</h1>
+            <p>与朋友视频聊天并拍摄特效快照</p>
+        </header>
 
-    <div>
-        <label for="roomInput">房间号:</label>
-        <input type="text" id="roomInput" value="defaultRoom">
-        <label for="usernameInput">用户名:</label>
-        <input type="text" id="usernameInput">
-        <button onclick="joinRoom()">加入房间</button>
-    </div>
-
-    <div id="videosContainer">
-        <div id="localVideoContainer" class="video-container">
-             <video id="localVideo" autoplay muted playsinline></video>
-             <div class="video-label" id="localVideoLabel">你</div>
-             <canvas id="snapshotCanvas" style="display: none;"></canvas>
+        <div class="join-form">
+            <div class="form-group">
+                <label for="roomInput"><i class="fas fa-door-open"></i> 房间号</label>
+                <input type="text" id="roomInput" value="defaultRoom" placeholder="输入房间号">
+            </div>
+            <div class="form-group">
+                <label for="usernameInput"><i class="fas fa-user"></i> 用户名</label>
+                <input type="text" id="usernameInput" placeholder="输入你的名字">
+            </div>
+            <button onclick="joinRoom()"><i class="fas fa-sign-in-alt"></i> 加入房间</button>
         </div>
+
+        <div id="videosContainer">
+            <div id="localVideoContainer" class="video-container">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="video-label">
+                    <span class="status-indicator status-online"></span>
+                    <span id="localVideoLabel">你</span>
+                </div>
+                <canvas id="snapshotCanvas"></canvas>
+            </div>
         </div>
 
-    <div id="snapshotControls">
-        <h2>特效快照</h2>
-        选择特效：
-        <select id="effectSelect">
-            <option value="enlarge">哈哈镜放大</option>
-            <option value="reduce">哈哈镜缩小</option>
-            <option value="blur">模糊</option>
-            <option value="edge_detection">边缘检测</option>
-        </select>
-        <button onclick="takeSnapshot()">拍特效照片</button>
-        <p id="snapshotStatus"></p>
-    </div>
+        <div class="controls">
+            <h2><i class="fas fa-camera-retro"></i> 特效快照</h2>
+            <div class="snapshot-controls">
+                <select id="effectSelect">
+                    <option value="enlarge">哈哈镜放大</option>
+                    <option value="reduce">哈哈镜缩小</option>
+                    <option value="blur">模糊效果</option>
+                    <option value="edge_detection">边缘检测</option>
+                </select>
+                <button onclick="takeSnapshot()"><i class="fas fa-camera"></i> 拍摄特效照片</button>
+                <p id="snapshotStatus"></p>
+            </div>
+        </div>
 
-    <div id="processedSnapshot" style="display: none;">
-        <h2>处理后的快照</h2>
-        <img id="processedSnapshotImg" src="" alt="Processed Snapshot">
+        <div class="snapshot-result" id="processedSnapshot">
+            <h2><i class="fas fa-image"></i> 处理后的快照</h2>
+            <img id="processedSnapshotImg" src="" alt="Processed Snapshot">
+        </div>
     </div>
-
 
     <script>
+        // 这里放置之前的JavaScript代码，保持不变
         let socket;
         let currentRoom;
         let currentUsername;
@@ -110,7 +373,6 @@
         const snapshotStatus = document.getElementById('snapshotStatus');
         const processedSnapshotDiv = document.getElementById('processedSnapshot');
         const processedSnapshotImg = document.getElementById('processedSnapshotImg');
-
 
         // STUN 服务器列表
         const iceServers = {
@@ -176,7 +438,7 @@
 
                     const label = document.createElement('div');
                     label.className = 'video-label';
-                    label.textContent = remoteUsername;
+                    label.innerHTML = `<span class="status-indicator status-online"></span><span>${remoteUsername}</span>`;
                     remoteVideoContainer.appendChild(label);
                 }
 
@@ -192,8 +454,14 @@
 
             peerConnection.onconnectionstatechange = event => {
                 console.log(`PeerConnection state for ${remoteUsername}: ${peerConnection.connectionState}`);
-                if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
-                     removeUserVideo(remoteUsername);
+                const label = document.querySelector(`#video-container-${remoteUsername} .video-label span.status-indicator`);
+                if (label) {
+                    if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
+                        label.className = 'status-indicator status-offline';
+                        setTimeout(() => removeUserVideo(remoteUsername), 3000);
+                    } else {
+                        label.className = 'status-indicator status-online';
+                    }
                 }
             };
 
@@ -252,11 +520,11 @@
              context.drawImage(localVideo, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
 
              // 将 Canvas 内容导出为 Base64 编码的图片数据 URL
-             const imageDataUrl = snapshotCanvas.toDataURL('image/png'); // 可以选择其他格式如 'image/jpeg'
+             const imageDataUrl = snapshotCanvas.toDataURL('image/png');
 
              // 显示处理状态
-             snapshotStatus.textContent = `正在处理快照 (${effectType})...`;
-             processedSnapshotDiv.style.display = 'none'; // 隐藏之前的处理结果
+             snapshotStatus.innerHTML = `<div class="loader"></div> 正在处理快照 (${effectType})...`;
+             processedSnapshotDiv.style.display = 'none';
 
              // 通过 SocketIO 发送给服务器
              socket.emit('process_snapshot', {
@@ -282,10 +550,10 @@
                          if (room && username) {
                              currentRoom = room;
                              currentUsername = username;
+                             document.getElementById('localVideoLabel').textContent = username;
                              socket.emit('join', { room: currentRoom, username: currentUsername });
                          } else {
-                              // 如果信息不全，提示用户填写并点击加入
-                             console.log("请填写房间号和用户名，然后点击加入房间。");
+                              console.log("请填写房间号和用户名，然后点击加入房间。");
                          }
                      }
                  });
@@ -293,13 +561,11 @@
 
              socket.on('disconnect', () => {
                 console.log('Socket.IO disconnected.');
-                // 清理所有 peer connections 和视频
                 for (const user in peerConnections) {
                      removeUserVideo(user);
                 }
                 peerConnections = {};
-                // 清理快照状态
-                snapshotStatus.textContent = '已断开连接。';
+                snapshotStatus.innerHTML = '<span class="status-indicator status-offline"></span> 已断开连接';
                 processedSnapshotDiv.style.display = 'none';
              });
 
@@ -316,8 +582,7 @@
                 for (const user of existingUsers) {
                     if (user !== currentUsername) {
                         createPeerConnection(user);
-                        // 新加入的用户向现有用户发起 Offer
-                         await sendOffer(user);
+                        await sendOffer(user);
                     }
                 }
              });
@@ -327,8 +592,6 @@
                  const newUser = data.username;
                  if (newUser !== currentUsername) {
                      createPeerConnection(newUser);
-                     // 现有用户接收新用户的 Offer (新用户在 'users_in_room' 逻辑中发 Offer)
-                      console.log(`等待来自新用户 ${newUser} 的 Offer...`);
                  }
              });
 
@@ -343,9 +606,8 @@
                  const offer = data.offer;
                  let peerConnection = peerConnections[fromUser];
                  if (!peerConnection) {
-                      console.warn(`收到 Offer 但未找到与用户 ${fromUser} 的 PeerConnection，正在创建...`);
-                     peerConnection = createPeerConnection(fromUser);
-                     if (localStream) {
+                      peerConnection = createPeerConnection(fromUser);
+                      if (localStream) {
                          localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
                      }
                  }
@@ -367,11 +629,10 @@
              });
 
              socket.on('candidate', async (data) => {
-                  // console.log('收到 Candidate 来自:', data.from_username);
                  const fromUser = data.from_username;
                  const candidate = data.candidate;
                  const peerConnection = peerConnections[fromUser];
-                  if (!peerConnection) { console.warn(`收到 Candidate 但未找到与用户 ${fromUser} 的 PeerConnection`); return; }
+                  if (!peerConnection) return;
                  try {
                      if (candidate) { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); }
                  } catch (error) { console.error(`添加 ICE Candidate 失败来自 ${fromUser}:`, error); }
@@ -379,7 +640,7 @@
 
              // --- 特效快照结果事件 ---
              socket.on('snapshot_processed', (data) => {
-                 const taskId = data.task_id; // 如果需要的话，可以用 task_id 匹配请求
+                 const taskId = data.task_id;
                  const status = data.status;
                  const message = data.message;
                  const imageDataUrl = data.image_data_url;
@@ -387,19 +648,16 @@
                  console.log(`Received processed snapshot result for task ${taskId} with status: ${status}`);
 
                  if (status === 'completed' && imageDataUrl) {
-                     snapshotStatus.textContent = '快照处理完成！';
+                     snapshotStatus.innerHTML = '<span style="color: var(--success-color)">✓</span> 快照处理完成！';
                      processedSnapshotImg.src = imageDataUrl;
-                     processedSnapshotDiv.style.display = 'block'; // 显示结果区域
+                     processedSnapshotDiv.style.display = 'block';
                  } else {
-                     snapshotStatus.textContent = `快照处理失败: ${message || '未知错误'}`;
+                     snapshotStatus.innerHTML = `<span style="color: var(--danger-color)">✗</span> 快照处理失败: ${message || '未知错误'}`;
                      processedSnapshotDiv.style.display = 'none';
-                     console.error(`Snapshot processing error for task ${taskId}: ${message}`);
                  }
              });
         }
 
-
-        // 加入房间按钮点击事件 (只负责连接 SocketIO 和发送 join 事件)
         function joinRoom() {
              const room = document.getElementById('roomInput').value.trim();
              const username = document.getElementById('usernameInput').value.trim();
@@ -409,25 +667,19 @@
                  return;
              }
 
-             // 如果 socket 未连接或已断开，则建立连接和监听
              if (!socket || !socket.connected) {
-                  setupSocketListeners(); // 建立连接并在连接成功后发送join
+                  setupSocketListeners();
              } else {
-                 // 如果 socket 已连接，直接发送 join 事件（可能用于切换房间/用户）
                  console.log(`正在离开房间 ${currentRoom} 用户 ${currentUsername} 并加入新房间 ${room} 用户 ${username}`);
-                 // 发送 leave 事件以便服务器清理
                  socket.emit('leave', { room: currentRoom, username: currentUsername });
 
-                 // 清理本地 PeerConnections 和视频 (模拟离开效果)
                 for (const user in peerConnections) {
                      removeUserVideo(user);
                 }
                 peerConnections = {};
 
-                 // 更新当前信息并发送 join
                  currentRoom = room;
                  currentUsername = username;
-                 // 重新获取本地流，然后发送 join
                  getLocalStream().then(() => {
                      if (localStream) {
                           socket.emit('join', { room: currentRoom, username: currentUsername });
@@ -435,9 +687,6 @@
                  });
              }
         }
-
-        // 页面加载时不会自动连接和获取流，等待用户点击“加入房间”
-        // getLocalStream(); // 不要在这里自动获取
     </script>
 </body>
 </html>
