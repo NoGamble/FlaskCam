@@ -3,114 +3,441 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Image Processing</title>
+    <title>多人视频聊天室带特效快照</title>
     <style>
-        :root {
-            --primary-color: #4a6fa5;
-            --secondary-color: #166088;
-            --background-color: #f8f9fa;
-            --text-color: #333;
-            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        #videosContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: var(--text-color);
-            background-color: var(--background-color);
-            margin: 0;
-            padding: 0;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #e1e1e1;
-        }
-        
-        h1 {
-            color: var(--primary-color);
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-        
-        .subtitle {
-            color: var(--secondary-color);
-            font-weight: 400;
-            margin-top: 0;
-        }
-        
         .video-container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: var(--card-shadow);
-            padding: 1rem;
-            margin-bottom: 2rem;
-            text-align: center;
+            position: relative;
+            border: 1px solid #ccc;
+            padding: 5px;
+            background-color: #f9f9f9;
         }
-        
-        .video-container img {
+        .video-container video {
+            width: 300px; /* 根据需要调整视频大小 */
+            height: auto;
+            background-color: black;
+        }
+        .video-label {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 3px 6px;
+            font-size: 0.9em;
+            border-radius: 3px;
+        }
+        #localVideoContainer {
+             border: 2px solid green; /* 本地视频加个边框区分 */
+             padding: 5px;
+             background-color: #f9f9f9;
+        }
+         #localVideoContainer video {
+            width: 300px; /* 根据需要调整视频大小 */
+            height: auto;
+            background-color: black;
+        }
+        #snapshotControls {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px dashed #ccc;
+        }
+        #processedSnapshot {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid blue;
+            background-color: #eef;
+        }
+        #processedSnapshot img {
             max-width: 100%;
             height: auto;
-            border-radius: 4px;
-        }
-        
-        .info-panel {
-            background: white;
-            border-radius: 8px;
-            box-shadow: var(--card-shadow);
-            padding: 1.5rem;
-            margin-top: 2rem;
-        }
-        
-        .info-panel h2 {
-            color: var(--secondary-color);
-            margin-top: 0;
-        }
-        
-        footer {
-            text-align: center;
-            margin-top: 3rem;
-            padding-top: 1rem;
-            border-top: 1px solid #e1e1e1;
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.1.3/dist/socket.io.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Real-Time Image Processing</h1>
-            <p class="subtitle">Live demonstration of edge detection algorithm</p>
-        </header>
-        
-        <div class="video-container">
-            <img src="{{ url_for('video_feed') }}" width="640" height="480" alt="Live processed video feed">
-        </div>
-        
-        <div class="info-panel">
-            <h2>About This Demonstration</h2>
-            <p>This system processes live video feed using computer vision algorithms. The left side shows the original camera input, while the right side displays the processed output with edge detection applied.</p>
-            <p>The backend uses Python with Flask for web serving and ZeroMQ for distributed processing between components.</p>
-        </div>
-        
-        <footer>
-            <p>© 2023 Image Processing Demo | Powered by Flask and ZeroMQ</p>
-        </footer>
+    <h1>多人视频聊天室带特效快照</h1>
+
+    <div>
+        <label for="roomInput">房间号:</label>
+        <input type="text" id="roomInput" value="defaultRoom">
+        <label for="usernameInput">用户名:</label>
+        <input type="text" id="usernameInput">
+        <button onclick="joinRoom()">加入房间</button>
     </div>
+
+    <div id="videosContainer">
+        <div id="localVideoContainer" class="video-container">
+             <video id="localVideo" autoplay muted playsinline></video>
+             <div class="video-label" id="localVideoLabel">你</div>
+             <canvas id="snapshotCanvas" style="display: none;"></canvas>
+        </div>
+        </div>
+
+    <div id="snapshotControls">
+        <h2>特效快照</h2>
+        选择特效：
+        <select id="effectSelect">
+            <option value="enlarge">哈哈镜放大</option>
+            <option value="reduce">哈哈镜缩小</option>
+            <option value="blur">模糊</option>
+            <option value="edge_detection">边缘检测</option>
+        </select>
+        <button onclick="takeSnapshot()">拍特效照片</button>
+        <p id="snapshotStatus"></p>
+    </div>
+
+    <div id="processedSnapshot" style="display: none;">
+        <h2>处理后的快照</h2>
+        <img id="processedSnapshotImg" src="" alt="Processed Snapshot">
+    </div>
+
+
+    <script>
+        let socket;
+        let currentRoom;
+        let currentUsername;
+        const localVideo = document.getElementById('localVideo');
+        const videosContainer = document.getElementById('videosContainer');
+        const peerConnections = {}; // { remoteUsername: RTCPeerConnection_instance }
+        let localStream;
+        const snapshotCanvas = document.getElementById('snapshotCanvas');
+        const effectSelect = document.getElementById('effectSelect');
+        const snapshotStatus = document.getElementById('snapshotStatus');
+        const processedSnapshotDiv = document.getElementById('processedSnapshot');
+        const processedSnapshotImg = document.getElementById('processedSnapshotImg');
+
+
+        // STUN 服务器列表
+        const iceServers = {
+            iceServers: [{
+                urls: 'stun:stun.l.google.com:19302'
+            }]
+        };
+
+        // 获取本地媒体流
+        async function getLocalStream() {
+             try {
+                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                 localVideo.srcObject = localStream;
+                 console.log('本地媒体流获取成功');
+             } catch (error) {
+                 console.error('获取媒体流失败:', error);
+                 alert('无法获取摄像头和麦克风权限，请检查设置。');
+             }
+        }
+
+        // 创建 RTCPeerConnection
+        function createPeerConnection(remoteUsername) {
+            console.log(`为用户 ${remoteUsername} 创建 PeerConnection`);
+            const peerConnection = new RTCPeerConnection(iceServers);
+            peerConnections[remoteUsername] = peerConnection;
+
+            // 添加本地流的轨道
+            if (localStream) {
+                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                 console.log(`本地流轨道添加到 ${remoteUsername} 的 PeerConnection`);
+            } else {
+                 console.error("本地流未获取，无法添加到 PeerConnection!");
+            }
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    console.log(`发送 ICE candidate 给 ${remoteUsername}`);
+                    socket.emit('candidate', {
+                        room: currentRoom,
+                        candidate: event.candidate,
+                        to_username: remoteUsername,
+                        from_username: currentUsername
+                    });
+                }
+            };
+
+            peerConnection.ontrack = event => {
+                console.log(`接收到来自 ${remoteUsername} 的远程流`);
+                let remoteVideoContainer = document.getElementById(`video-container-${remoteUsername}`);
+                let remoteVideo = document.getElementById(`video-${remoteUsername}`);
+
+                if (!remoteVideoContainer) {
+                    remoteVideoContainer = document.createElement('div');
+                    remoteVideoContainer.id = `video-container-${remoteUsername}`;
+                    remoteVideoContainer.className = 'video-container';
+                    videosContainer.appendChild(remoteVideoContainer);
+
+                    remoteVideo = document.createElement('video');
+                    remoteVideo.id = `video-${remoteUsername}`;
+                    remoteVideo.autoplay = true;
+                    remoteVideo.playsinline = true;
+                    remoteVideoContainer.appendChild(remoteVideo);
+
+                    const label = document.createElement('div');
+                    label.className = 'video-label';
+                    label.textContent = remoteUsername;
+                    remoteVideoContainer.appendChild(label);
+                }
+
+                if (event.streams && event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                } else {
+                    if (!remoteVideo.srcObject) {
+                         remoteVideo.srcObject = new MediaStream();
+                    }
+                     remoteVideo.srcObject.addTrack(event.track);
+                }
+            };
+
+            peerConnection.onconnectionstatechange = event => {
+                console.log(`PeerConnection state for ${remoteUsername}: ${peerConnection.connectionState}`);
+                if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
+                     removeUserVideo(remoteUsername);
+                }
+            };
+
+            return peerConnection;
+        }
+
+         async function sendOffer(remoteUsername) {
+             const peerConnection = peerConnections[remoteUsername];
+             if (!peerConnection) return;
+             try {
+                 const offer = await peerConnection.createOffer();
+                 await peerConnection.setLocalDescription(offer);
+                 socket.emit('offer', { room: currentRoom, offer: offer, to_username: remoteUsername, from_username: currentUsername });
+             } catch (error) { console.error(`创建或发送 Offer 失败给 ${remoteUsername}:`, error); }
+         }
+
+         async function sendAnswer(remoteUsername) {
+             const peerConnection = peerConnections[remoteUsername];
+             if (!peerConnection) return;
+             try {
+                  const answer = await peerConnection.createAnswer();
+                 await peerConnection.setLocalDescription(answer);
+                 socket.emit('answer', { room: currentRoom, answer: answer, to_username: remoteUsername, from_username: currentUsername });
+             } catch (error) { console.error(`创建或发送 Answer 失败给 ${remoteUsername}:`, error); }
+         }
+
+        function removeUserVideo(username) {
+             console.log(`移除用户 ${username} 的视频`);
+             const videoContainer = document.getElementById(`video-container-${username}`);
+             if (videoContainer) { videosContainer.removeChild(videoContainer); }
+             if (peerConnections[username]) {
+                 peerConnections[username].close();
+                 delete peerConnections[username];
+             }
+        }
+
+        // --- 特效快照功能 ---
+        function takeSnapshot() {
+             if (!localStream || !localVideo.srcObject) {
+                 alert('本地视频流未启动！');
+                 return;
+             }
+
+             const effectType = effectSelect.value;
+             if (!effectType) {
+                 alert('请选择一个特效！');
+                 return;
+             }
+
+             // 设置 Canvas 尺寸与视频流一致
+             snapshotCanvas.width = localVideo.videoWidth;
+             snapshotCanvas.height = localVideo.videoHeight;
+
+             // 在 Canvas 上绘制当前视频帧
+             const context = snapshotCanvas.getContext('2d');
+             context.drawImage(localVideo, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
+
+             // 将 Canvas 内容导出为 Base64 编码的图片数据 URL
+             const imageDataUrl = snapshotCanvas.toDataURL('image/png'); // 可以选择其他格式如 'image/jpeg'
+
+             // 显示处理状态
+             snapshotStatus.textContent = `正在处理快照 (${effectType})...`;
+             processedSnapshotDiv.style.display = 'none'; // 隐藏之前的处理结果
+
+             // 通过 SocketIO 发送给服务器
+             socket.emit('process_snapshot', {
+                 image_data_url: imageDataUrl,
+                 effect: effectType
+             });
+
+             console.log(`Sent snapshot for effect '${effectType}' to server.`);
+        }
+
+        // --- SocketIO 事件监听 (合并视频聊天和快照处理) ---
+        function setupSocketListeners() {
+             socket = io();
+             console.log('Socket connecting...');
+
+             socket.on('connect', () => {
+                 console.log('Socket.IO connected.');
+                 // 连接成功后，获取本地流并加入房间
+                 getLocalStream().then(() => {
+                     if (localStream) {
+                         const room = document.getElementById('roomInput').value.trim();
+                         const username = document.getElementById('usernameInput').value.trim();
+                         if (room && username) {
+                             currentRoom = room;
+                             currentUsername = username;
+                             socket.emit('join', { room: currentRoom, username: currentUsername });
+                         } else {
+                              // 如果信息不全，提示用户填写并点击加入
+                             console.log("请填写房间号和用户名，然后点击加入房间。");
+                         }
+                     }
+                 });
+             });
+
+             socket.on('disconnect', () => {
+                console.log('Socket.IO disconnected.');
+                // 清理所有 peer connections 和视频
+                for (const user in peerConnections) {
+                     removeUserVideo(user);
+                }
+                peerConnections = {};
+                // 清理快照状态
+                snapshotStatus.textContent = '已断开连接。';
+                processedSnapshotDiv.style.display = 'none';
+             });
+
+             socket.on('join_error', (data) => {
+                 alert('加入房间失败: ' + data.message);
+                 console.error('Join error:', data.message);
+                 if(socket) socket.disconnect();
+             });
+
+             // WebRTC 信令事件
+             socket.on('users_in_room', async (data) => {
+                console.log('收到现有用户列表:', data.users);
+                const existingUsers = data.users;
+                for (const user of existingUsers) {
+                    if (user !== currentUsername) {
+                        createPeerConnection(user);
+                        // 新加入的用户向现有用户发起 Offer
+                         await sendOffer(user);
+                    }
+                }
+             });
+
+             socket.on('user_joined', async (data) => {
+                 console.log('新用户加入:', data.username);
+                 const newUser = data.username;
+                 if (newUser !== currentUsername) {
+                     createPeerConnection(newUser);
+                     // 现有用户接收新用户的 Offer (新用户在 'users_in_room' 逻辑中发 Offer)
+                      console.log(`等待来自新用户 ${newUser} 的 Offer...`);
+                 }
+             });
+
+             socket.on('user_left', (data) => {
+                 console.log('用户离开:', data.username);
+                 removeUserVideo(data.username);
+             });
+
+             socket.on('offer', async (data) => {
+                 console.log('收到 Offer 来自:', data.from_username);
+                 const fromUser = data.from_username;
+                 const offer = data.offer;
+                 let peerConnection = peerConnections[fromUser];
+                 if (!peerConnection) {
+                      console.warn(`收到 Offer 但未找到与用户 ${fromUser} 的 PeerConnection，正在创建...`);
+                     peerConnection = createPeerConnection(fromUser);
+                     if (localStream) {
+                         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                     }
+                 }
+                 try {
+                     await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                     await sendAnswer(fromUser);
+                 } catch (error) { console.error(`处理 Offer 失败来自 ${fromUser}:`, error); }
+             });
+
+             socket.on('answer', async (data) => {
+                 console.log('收到 Answer 来自:', data.from_username);
+                 const fromUser = data.from_username;
+                 const answer = data.answer;
+                 const peerConnection = peerConnections[fromUser];
+                  if (!peerConnection) { console.error(`收到 Answer 但未找到与用户 ${fromUser} 的 PeerConnection`); return; }
+                 try {
+                     await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                 } catch (error) { console.error(`处理 Answer 失败来自 ${fromUser}:`, error); }
+             });
+
+             socket.on('candidate', async (data) => {
+                  // console.log('收到 Candidate 来自:', data.from_username);
+                 const fromUser = data.from_username;
+                 const candidate = data.candidate;
+                 const peerConnection = peerConnections[fromUser];
+                  if (!peerConnection) { console.warn(`收到 Candidate 但未找到与用户 ${fromUser} 的 PeerConnection`); return; }
+                 try {
+                     if (candidate) { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); }
+                 } catch (error) { console.error(`添加 ICE Candidate 失败来自 ${fromUser}:`, error); }
+             });
+
+             // --- 特效快照结果事件 ---
+             socket.on('snapshot_processed', (data) => {
+                 const taskId = data.task_id; // 如果需要的话，可以用 task_id 匹配请求
+                 const status = data.status;
+                 const message = data.message;
+                 const imageDataUrl = data.image_data_url;
+
+                 console.log(`Received processed snapshot result for task ${taskId} with status: ${status}`);
+
+                 if (status === 'completed' && imageDataUrl) {
+                     snapshotStatus.textContent = '快照处理完成！';
+                     processedSnapshotImg.src = imageDataUrl;
+                     processedSnapshotDiv.style.display = 'block'; // 显示结果区域
+                 } else {
+                     snapshotStatus.textContent = `快照处理失败: ${message || '未知错误'}`;
+                     processedSnapshotDiv.style.display = 'none';
+                     console.error(`Snapshot processing error for task ${taskId}: ${message}`);
+                 }
+             });
+        }
+
+
+        // 加入房间按钮点击事件 (只负责连接 SocketIO 和发送 join 事件)
+        function joinRoom() {
+             const room = document.getElementById('roomInput').value.trim();
+             const username = document.getElementById('usernameInput').value.trim();
+
+             if (!room || !username) {
+                 alert('请输入房间号和用户名');
+                 return;
+             }
+
+             // 如果 socket 未连接或已断开，则建立连接和监听
+             if (!socket || !socket.connected) {
+                  setupSocketListeners(); // 建立连接并在连接成功后发送join
+             } else {
+                 // 如果 socket 已连接，直接发送 join 事件（可能用于切换房间/用户）
+                 console.log(`正在离开房间 ${currentRoom} 用户 ${currentUsername} 并加入新房间 ${room} 用户 ${username}`);
+                 // 发送 leave 事件以便服务器清理
+                 socket.emit('leave', { room: currentRoom, username: currentUsername });
+
+                 // 清理本地 PeerConnections 和视频 (模拟离开效果)
+                for (const user in peerConnections) {
+                     removeUserVideo(user);
+                }
+                peerConnections = {};
+
+                 // 更新当前信息并发送 join
+                 currentRoom = room;
+                 currentUsername = username;
+                 // 重新获取本地流，然后发送 join
+                 getLocalStream().then(() => {
+                     if (localStream) {
+                          socket.emit('join', { room: currentRoom, username: currentUsername });
+                     }
+                 });
+             }
+        }
+
+        // 页面加载时不会自动连接和获取流，等待用户点击“加入房间”
+        // getLocalStream(); // 不要在这里自动获取
+    </script>
 </body>
 </html>
